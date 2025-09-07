@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>配送業務日報</title>
+  <style>
+    /* --- Reset & Base Styles --- */
+    :root{
+      --primary-color:#007bff;
+      --secondary-color:#6c757d;
+      --background-color:#f8f9fa;
+      --surface-color:#ffffff;
+      --text-color:#212529;
+      --border-color:#dee2e6;
+      --danger-color:#dc3545;
+      --success-color:#28a745;
+      --shadow:0 4px 6px rgba(0,0,0,.1);
+      --tap-target-size:44px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      background-color:var(--background-color);
+      color:var(--text-color); line-height:1.6;
+    }
+
+    /* --- Layout (screen) --- */
+    #app{max-width:800px;margin:20px auto;padding:0 15px}
+    header{
+      text-align:center;margin-bottom:2rem;padding:1rem;
+      background:linear-gradient(135deg,var(--primary-color),#0056b3);
+      color:#fff;border-radius:8px;box-shadow:var(--shadow)
+    }
+    h1{font-size:1.8rem}
+    h2{
+      font-size:1.4rem;margin-bottom:1rem;padding-bottom:.5rem;
+      border-bottom:2px solid var(--primary-color);
+      display:flex;align-items:center;gap:.5rem
+    }
+    section{
+      background-color:var(--surface-color);border-radius:8px;
+      padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow)
+    }
+
+    /* --- Form Elements --- */
+    .form-group{margin-bottom:1.2rem}
+    .form-group>label{display:block;font-weight:700;margin-bottom:.5rem}
+    .input-group{display:flex;gap:.5rem}
+    input[type="text"],input[type="date"],input[type="time"],
+    input[type="number"],select,textarea{
+      width:100%;padding:.75rem;border:1px solid var(--border-color);
+      border-radius:6px;font-size:1rem;min-height:var(--tap-target-size);
+      transition:border-color .2s,box-shadow .2s
+    }
+    input:focus,select:focus,textarea:focus{
+      outline:none;border-color:var(--primary-color);
+      box-shadow:0 0 0 3px rgba(0,123,255,.25)
+    }
+    textarea{resize:vertical;min-height:100px}
+    button{
+      padding:.75rem 1.5rem;border:none;border-radius:6px;font-size:1rem;
+      font-weight:700;cursor:pointer;min-height:var(--tap-target-size);
+      transition:background-color .2s,transform .1s
+    }
+    button:active{transform:translateY(1px)}
+    .btn{color:#fff;background-color:var(--primary-color)}
+    .btn:hover{background-color:#0056b3}
+    .btn-secondary{background-color:var(--secondary-color);color:#fff}
+    .btn-secondary:hover{background-color:#5a6268}
+    .btn-danger{background-color:var(--danger-color);color:#fff}
+    .btn-danger:hover{background-color:#c82333}
+    .now-btn{flex-shrink:0;width:60px;padding:.5rem}
+
+    /* --- Dynamic items (screen) --- */
+    .dynamic-item{
+      border:1px solid var(--border-color);border-radius:6px;
+      padding:1rem;margin-bottom:1rem;position:relative;background:#fdfdfd
+    }
+    .remove-btn{
+      position:absolute;top:10px;right:10px;width:30px;height:30px;padding:0;
+      display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer
+    }
+    .remove-btn svg{width:20px;height:20px;fill:var(--secondary-color);transition:fill .2s}
+    .remove-btn:hover svg{fill:var(--danger-color)}
+    .add-btn{display:block;width:100%;margin-top:1rem;background-color:var(--success-color);color:#fff}
+    .add-btn:hover{background-color:#218838}
+    .work-description-options{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+      gap:.75rem;padding:.75rem;border:1px solid var(--border-color);border-radius:6px
+    }
+    .checkbox-group{display:flex;align-items:center;gap:.5rem}
+    .checkbox-group input[type="checkbox"]{min-height:auto;height:20px;width:20px}
+    .checkbox-group label{font-weight:normal;margin-bottom:0}
+
+    /* --- Footer (screen) --- */
+    footer{
+      display:flex;gap:1rem;justify-content:center;padding:1.5rem;
+      background-color:var(--surface-color);border-radius:8px;box-shadow:var(--shadow)
+    }
+    footer button{width:100%}
+    @media (min-width:600px){ footer{flex-direction:row} footer button{width:auto} }
+
+    /* ===== A4紙フォーマット（print） ===== */
+    #print-sheet{display:none}
+
+    @media print{
+      /* 余白：上下を軽く圧縮してA4に収める */
+      @page{ size:A4; margin:8mm 10mm; }
+
+      /* 画面UIを隠し、紙レイアウトだけ表示 */
+      #app{display:none !important}
+      #print-sheet{display:block !important}
+
+      /* 全体のフォントを微縮 */
+      body{background:#fff !important;color:#000;font-size:9.2pt; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+
+      .ps-wrap{width:100%}
+      .ps-title{text-align:center;font-weight:700;font-size:14.5pt;margin-bottom:4mm}
+
+      .ps-grid,.ps-table{width:100%;border-collapse:collapse;table-layout:fixed}
+      .ps-grid th,.ps-grid td,.ps-table th,.ps-table td{
+        /* セルのパディングを微縮 */
+        border:1px solid #000; padding:1.8mm 1.6mm; vertical-align:middle;
+      }
+      .ps-table th{text-align:center}
+
+      .ps-small{font-size:9pt}
+      .ps-center{text-align:center}
+      .ps-tight{padding:1.4mm 1.4mm !important; line-height:1.22}
+      .ps-inline-label{font-weight:700; margin-right:1.4mm; display:inline-block}
+      .ps-compact{border-spacing:0}
+
+      /* 検印ブロックを微縮 */
+      .ps-stamp-head{width:11mm; font-weight:700}
+      .ps-stamp-cell{width:15mm; height:15mm}
+      .ps-stamp-box{width:15mm; height:15mm}
+
+      /* 上段ブロックの下マージンを圧縮 */
+      .ps-top{margin-bottom:3mm}
+
+      /* 行高をさらに数%圧縮（高さ要因の主犯） */
+      .ps-delivery-rows td{height:7.6mm}   /* 納品 6行 */
+      .ps-internal-rows td{height:7.6mm}   /* 社内 6行 */
+      h1,h2,h3,p{margin:0}
+
+      /* 翌日配送ルートを1行に圧縮表示 */
+      #ps-next-route{
+        display:inline;
+        min-height:0;
+        line-height:1.22;
+        white-space:normal;
+      }
+
+      /* 出発／帰社／距離行のパディングも微縮 */
+      .ps-trip-row td{
+        padding:1.4mm 1.4mm !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 画面アプリ -->
+  <div id="app">
+    <header><h1>配送業務日報</h1></header>
+
+    <main>
+      <form id="reportForm" onsubmit="return false;">
+        <section>
+          <h2>基本情報</h2>
+          <div class="form-group">
+            <label for="report-date">日付</label>
+            <input type="date" id="report-date" required>
+          </div>
+          <div class="form-group">
+            <label for="user-name">氏名</label>
+            <input type="text" id="user-name" placeholder="名前を入力" required>
+          </div>
+        </section>
+
+        <section>
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c1.66 0 3 1.34 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm13.5-8.5l1.96 2.5H17V9.5h3.5zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>
+            配送業務
+          </h2>
+
+          <div class="form-group">
+            <label for="departure-time">出発時間</label>
+            <div class="input-group">
+              <input type="time" id="departure-time">
+              <button type="button" class="now-btn btn-secondary">今</button>
+            </div>
+          </div>
+
+          <div id="delivery-list"></div>
+          <button type="button" id="add-delivery-btn" class="add-btn">[+] 納品先を追加</button>
+
+          <hr style="margin:1.5rem 0;border:none;border-top:1px dashed var(--border-color)">
+
+          <div class="form-group">
+            <label for="return-time">帰社時間</label>
+            <div class="input-group">
+              <input type="time" id="return-time">
+              <button type="button" class="now-btn btn-secondary">今</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="mileage">走行距離 (km)</label>
+            <input type="number" id="mileage" placeholder="例: 123">
+          </div>
+        </section>
+
+        <section>
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 11H19V7l-4-4H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6.5zM15 4l4 4h-4V4zM7 17h10v-2H7v2zm5-4H7v-2h5v2z"/></svg>
+            社内業務
+          </h2>
+
+          <div id="internal-work-list"></div>
+          <button type="button" id="add-internal-work-btn" class="add-btn">[+] 社内業務を追加</button>
+        </section>
+
+        <section>
+          <h2>申し送り事項</h2>
+          <div class="form-group">
+            <label for="next-day-route">翌日配送ルート</label>
+            <div id="next-day-route-list"></div>
+            <button type="button" id="add-next-route-btn" class="add-btn btn-secondary" style="margin-top:0;">[+] 配送先を追加</button>
+          </div>
+          <div class="form-group">
+            <label for="special-notes">特記事項</label>
+            <textarea id="special-notes" placeholder="その他、特筆すべき事項があれば記入"></textarea>
+          </div>
+        </section>
+      </form>
+    </main>
+
+    <footer>
+      <button type="button" id="print-btn" class="btn">PDF保存 / 印刷</button>
+    </footer>
+  </div>
+
+  <!-- Templates -->
+  <template id="delivery-item-template">
+    <div class="dynamic-item">
+      <button type="button" class="remove-btn" aria-label="この項目を削除">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <div class="form-group">
+        <label>納品時間 (開始〜完了)</label>
+        <div class="input-group">
+          <input type="time" class="delivery-start-time">
+          <button type="button" class="now-btn btn-secondary">今</button>
+          <input type="time" class="delivery-end-time">
+          <button type="button" class="now-btn btn-secondary">今</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>納品場所</label>
+        <select class="delivery-location"></select>
+        <input type="text" class="delivery-location-other" placeholder="具体的な納品場所を入力" style="display:none;margin-top:.5rem">
+      </div>
+    </div>
+  </template>
+
+  <template id="internal-work-item-template">
+    <div class="dynamic-item">
+      <button type="button" class="remove-btn" aria-label="この項目を削除">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <div class="form-group">
+        <label>作業時間 (開始〜完了)</label>
+        <div class="input-group">
+          <input type="time" class="work-start-time">
+          <button type="button" class="now-btn btn-secondary">今</button>
+          <input type="time" class="work-end-time">
+          <button type="button" class="now-btn btn-secondary">今</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>作業内容 (複数選択可)</label>
+        <div class="work-description-options"></div>
+        <input type="text" class="work-description-other" placeholder="具体的な作業内容を入力" style="display:none;margin-top:.5rem">
+      </div>
+    </div>
+  </template>
+
+  <template id="next-route-item-template">
+    <div class="dynamic-item" style="padding:1rem;">
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <span style="font-weight:bold;font-size:1.2rem;color:var(--secondary-color);"></span>
+        <select class="delivery-location" style="flex-grow:1;"></select>
+        <button type="button" class="remove-btn" aria-label="この項目を削除" style="position:static;top:auto;right:auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <input type="text" class="next-route-other" placeholder="具体的なルートを入力" style="display:none;width:100%;margin-top:.5rem">
+    </div>
+  </template>
+
+  <!-- ===== A4印刷専用レイアウト（画面では非表示） ===== -->
+  <div id="print-sheet" aria-hidden="true">
+    <div class="ps-wrap">
+      <div class="ps-title">業務日報</div>
+
+      <!-- 上段：日付／製造部＋作業者名／検印（均一マス） -->
+      <table class="ps-grid ps-top">
+        <tr>
+          <td style="width:56%;">
+            <table class="ps-grid" style="width:100%;border:0;table-layout:fixed;">
+              <tr>
+                <td class="ps-tight" style="width:22mm;"><span class="ps-small">日付</span></td>
+                <td class="ps-tight"><div id="ps-date"></div></td>
+              </tr>
+              <tr>
+                <td class="ps-tight"><span class="ps-small">製造部</span></td>
+                <td class="ps-tight">
+                  <span class="ps-small">作業者：</span><span id="ps-operator"></span>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td style="width:44%;">
+            <table class="ps-grid" style="width:100%;border:0;table-layout:fixed;">
+              <tr>
+                <td class="ps-center ps-stamp-head">検<br>印</td>
+                <td class="ps-stamp-cell"><div class="ps-stamp-box"></div></td>
+                <td class="ps-stamp-cell"><div class="ps-stamp-box"></div></td>
+                <td class="ps-stamp-cell"><div class="ps-stamp-box"></div></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- 納品時間・納品先（6行固定） -->
+      <table class="ps-table">
+        <thead>
+          <tr><th style="width:40%;">納品時間</th><th>納品先</th></tr>
+        </thead>
+        <tbody id="ps-delivery-body" class="ps-delivery-rows"><!-- JSで埋める --></tbody>
+      </table>
+
+      <!-- 出発／帰社／距離（横並び）＋ 翌日ルート（同一ブロック内で圧縮表示） -->
+      <table class="ps-grid ps-compact" style="margin-top:2.2mm;">
+        <tr class="ps-trip-row">
+          <td class="ps-tight" style="width:34%;">
+            <span class="ps-small ps-inline-label">出発</span><span id="ps-departure"></span>
+          </td>
+          <td class="ps-tight" style="width:33%;">
+            <span class="ps-small ps-inline-label">帰社</span><span id="ps-return"></span>
+          </td>
+          <td class="ps-tight" style="width:33%;">
+            <span class="ps-small ps-inline-label">距離</span><span id="ps-mileage"></span> km
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3" class="ps-tight">
+            <span class="ps-small ps-inline-label">翌日ルート</span><span id="ps-next-route"></span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- 社内業務 -->
+      <table class="ps-table" style="margin-top:2.2mm;">
+        <thead>
+          <tr><th style="width:40%;">作業時間</th><th>業務内容</th></tr>
+        </thead>
+        <tbody id="ps-internal-body" class="ps-internal-rows"><!-- JSで埋める --></tbody>
+      </table>
+
+      <!-- 特記事項 -->
+      <table class="ps-grid" style="margin-top:2.2mm;">
+        <tr>
+          <td class="ps-tight">
+            <div class="ps-center ps-small" style="margin-bottom:1.2mm;">特記事項</div>
+            <div id="ps-notes"></div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- Constants ---
+      const DELIVERY_LOCATIONS = ['エバーメイト','ハマ','ヤマノセンター','協和ゴム','三宝','山野美容','資生堂','寿硝子','渋谷美容','深井硝子','大成化学','東京硝子','藤本科学','日本美容','牧口ゴム','明方堂','その他'];
+      const INTERNAL_WORK_ITEMS = ['工場成形品回収','工場形品片付け','指定納期品片付け','在庫品片付け','次回配送準備','荷受け','ノズルチップ付け','トリガー検査','瓶体検査','内職準備','内職配送','内職回収品片付け','その他'];
+
+      // --- Element Refs ---
+      const reportDate = document.getElementById('report-date');
+      const userName   = document.getElementById('user-name');
+      const printBtn   = document.getElementById('print-btn');
+
+      const deliveryList = document.getElementById('delivery-list');
+      const addDeliveryBtn = document.getElementById('add-delivery-btn');
+      const deliveryTemplate = document.getElementById('delivery-item-template');
+
+      const internalWorkList = document.getElementById('internal-work-list');
+      const addInternalWorkBtn = document.getElementById('add-internal-work-btn');
+      const internalWorkTemplate = document.getElementById('internal-work-item-template');
+
+      const nextDayRouteList = document.getElementById('next-day-route-list');
+      const addNextRouteBtn = document.getElementById('add-next-route-btn');
+      const nextRouteTemplate = document.getElementById('next-route-item-template');
+
+      // --- Helpers ---
+      const formatTime = (d)=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const populateSelect = (el, opts)=>{ el.innerHTML=''; opts.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; el.appendChild(o); }); };
+
+      // --- Dynamic creators ---
+      const createDeliveryItem = () => {
+        const content = deliveryTemplate.content.cloneNode(true);
+        const select = content.querySelector('.delivery-location');
+        populateSelect(select, DELIVERY_LOCATIONS);
+        deliveryList.appendChild(content);
+      };
+      const createInternalWorkItem = () => {
+        const content = internalWorkTemplate.content.cloneNode(true);
+        const box = content.querySelector('.work-description-options');
+        const uid = Date.now();
+        INTERNAL_WORK_ITEMS.forEach((txt,i)=>{
+          const g=document.createElement('div'); g.className='checkbox-group';
+          const cb=document.createElement('input'); cb.type='checkbox'; cb.id=`work-${uid}-${i}`; cb.value=txt; cb.className='work-description-checkbox';
+          const lb=document.createElement('label'); lb.htmlFor=cb.id; lb.textContent=txt;
+          g.appendChild(cb); g.appendChild(lb); box.appendChild(g);
+        });
+        internalWorkList.appendChild(content);
+      };
+      const createNextRouteItem = () => {
+        const content = nextRouteTemplate.content.cloneNode(true);
+        const select = content.querySelector('.delivery-location');
+        populateSelect(select, DELIVERY_LOCATIONS);
+        updateRouteNumbers();
+        nextDayRouteList.appendChild(content);
+        updateRouteNumbers();
+      };
+      const updateRouteNumbers = () => {
+        nextDayRouteList.querySelectorAll('.dynamic-item').forEach((item, idx)=>{
+          item.querySelector('span').textContent = `${idx+1}.`;
+        });
+      };
+
+      // --- Event handlers ---
+      document.body.addEventListener('click',(e)=>{
+        if(e.target.classList.contains('now-btn')){
+          const prev=e.target.previousElementSibling;
+          if(prev && prev.type==='time'){ prev.value=formatTime(new Date()); }
+          else{
+            const next=e.target.nextElementSibling;
+            if(next && next.type==='time'){ next.value=formatTime(new Date()); }
+          }
+        }
+        if(e.target.closest('.remove-btn')){
+          const item=e.target.closest('.dynamic-item');
+          const isRoute=item.parentElement.id==='next-day-route-list';
+          if(item){ item.remove(); if(isRoute) updateRouteNumbers(); }
+        }
+      });
+
+      deliveryList.addEventListener('change',(e)=>{
+        if(e.target.classList.contains('delivery-location')){
+          const other=e.target.nextElementSibling;
+          if(other && other.classList.contains('delivery-location-other')){
+            other.style.display = e.target.value==='その他' ? 'block' : 'none';
+          }
+        }
+      });
+      internalWorkList.addEventListener('change',(e)=>{
+        if(e.target.classList.contains('work-description-checkbox') && e.target.value==='その他'){
+          const other=e.target.closest('.form-group').querySelector('.work-description-other');
+          if(other){ other.style.display = e.target.checked ? 'block' : 'none'; }
+        }
+      });
+      nextDayRouteList.addEventListener('change',(e)=>{
+        if(e.target.classList.contains('delivery-location')){
+          const other=e.target.closest('.dynamic-item').querySelector('.next-route-other');
+          if(other){ other.style.display = e.target.value==='その他' ? 'block' : 'none'; }
+        }
+      });
+
+      addDeliveryBtn.addEventListener('click', createDeliveryItem);
+      addInternalWorkBtn.addEventListener('click', createInternalWorkItem);
+      addNextRouteBtn.addEventListener('click', createNextRouteItem);
+
+      // ---- 印刷用：紙レイアウトへデータ流し込み ----
+      const buildPrintSheet = () => {
+        // 日付・作業者（氏名）
+        document.getElementById('ps-date').textContent     = reportDate.value || '';
+        document.getElementById('ps-operator').textContent = userName.value  || '';
+
+        // 出発・帰社・距離
+        document.getElementById('ps-departure').textContent = document.getElementById('departure-time').value || '';
+        document.getElementById('ps-return').textContent    = document.getElementById('return-time').value || '';
+        document.getElementById('ps-mileage').textContent   = (document.getElementById('mileage').value || '').toString();
+
+        // 翌日ルート（1行化＋スラッシュ区切り）
+        const routeItems = Array.from(document.querySelectorAll('#next-day-route-list .dynamic-item'));
+        const routeTexts = routeItems.map(item=>{
+          const sel=item.querySelector('.delivery-location');
+          const other=item.querySelector('.next-route-other');
+          const v=sel?sel.value:'';
+          if(v==='その他' && other && other.value.trim()) return other.value.trim();
+          return v || '';
+        }).filter(Boolean);
+        document.getElementById('ps-next-route').textContent = routeTexts.join(' / ');
+
+        // 特記事項
+        document.getElementById('ps-notes').textContent = (document.getElementById('special-notes').value || '').trim();
+
+        // 納品（開始〜終了/納品先）→ 6行固定
+        const delBody=document.getElementById('ps-delivery-body');
+        delBody.innerHTML='';
+        const delItems=Array.from(document.querySelectorAll('#delivery-list .dynamic-item'));
+        delItems.forEach(item=>{
+          const s=item.querySelector('.delivery-start-time')?.value || '';
+          const e=item.querySelector('.delivery-end-time')?.value   || '';
+          const sel=item.querySelector('.delivery-location');
+          const oth=item.querySelector('.delivery-location-other');
+          let place=sel?sel.value:'';
+          if(place==='その他' && oth && oth.value.trim()) place=oth.value.trim();
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td>${(s||e)?`${s} 〜 ${e}`:'　'}</td><td>${place||'　'}</td>`;
+          delBody.appendChild(tr);
+        });
+        while(delBody.children.length < 6){ const tr=document.createElement('tr'); tr.innerHTML=`<td>　</td><td>　</td>`; delBody.appendChild(tr); }
+        while(delBody.children.length > 6){ delBody.removeChild(delBody.lastElementChild); }
+
+        // 社内業務（作業時間/業務内容）→ 6行目安・詰め
+        const inBody=document.getElementById('ps-internal-body');
+        inBody.innerHTML='';
+        const workItems=Array.from(document.querySelectorAll('#internal-work-list .dynamic-item'));
+        workItems.forEach(item=>{
+          const s=item.querySelector('.work-start-time')?.value || '';
+          const e=item.querySelector('.work-end-time')?.value   || '';
+          const picks=Array.from(item.querySelectorAll('.work-description-checkbox:checked')).map(cb=>cb.value);
+          const oth=item.querySelector('.work-description-other');
+          if(picks.includes('その他') && oth && oth.value.trim()){
+            const idx=picks.indexOf('その他'); if(idx>=0) picks.splice(idx,1);
+            picks.push(oth.value.trim());
+          }
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td>${(s||e)?`${s} 〜 ${e}`:'　'}</td><td>${picks.join('、')||'　'}</td>`;
+          inBody.appendChild(tr);
+        });
+        while(inBody.children.length < 6){ const tr=document.createElement('tr'); tr.innerHTML=`<td>　</td><td>　</td>`; inBody.appendChild(tr); }
+      };
+
+      // 印刷ボタン
+      printBtn.addEventListener('click', () => {
+        buildPrintSheet();
+        window.print();
+      });
+
+      // --- Initial State ---
+      reportDate.valueAsDate = new Date();
+      createDeliveryItem();
+      createInternalWorkItem();
+      createNextRouteItem();
+    });
+  </script>
+</body>
+</html>
